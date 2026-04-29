@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.09);
+    --border-strong: rgba(0,0,0,0.16);
+    --text: #1a1917;
+    --text-muted: #6b6a65;
+    --text-faint: #9c9b97;
+    --accent: #1d9e75;
+    --accent-light: #e1f5ee;
+    --accent-text: #0f6e56;
+    --radius: 12px;
+    --radius-sm: 8px;
+
+    --status-applied-bg: #e6f1fb;
+    --status-applied-text: #0c447c;
+    --status-interview-bg: #faeeda;
+    --status-interview-text: #633806;
+    --status-offer-bg: #eaf3de;
+    --status-offer-text: #27500a;
+    --status-rejected-bg: #fcebeb;
+    --status-rejected-text: #791f1f;
+    --status-wishlist-bg: #eeedfe;
+    --status-wishlist-text: #3c3489;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ── HEADER ─────────────────────────────────── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 14px; height: 14px; fill: white; }
+
+  .btn-primary {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    background: var(--text);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 7px 16px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:hover { opacity: 0.84; }
+
+  /* ── MAIN LAYOUT ─────────────────────────────── */
+  .container { max-width: 1140px; margin: 0 auto; padding: 0 2rem; }
+
+  /* ── STATS BAR ───────────────────────────────── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    padding: 1.5rem 0 1rem;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .stat-card:hover, .stat-card.active { border-color: var(--border-strong); }
+  .stat-card.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .stat-label {
+    font-size: 11.5px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text);
+  }
+  .stat-card[data-filter="APPLIED"] .stat-value   { color: var(--status-applied-text); }
+  .stat-card[data-filter="INTERVIEW"] .stat-value { color: var(--status-interview-text); }
+  .stat-card[data-filter="OFFER"] .stat-value     { color: var(--status-offer-text); }
+  .stat-card[data-filter="REJECTED"] .stat-value  { color: var(--status-rejected-text); }
+
+  /* ── TOOLBAR ─────────────────────────────────── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 1rem;
+  }
+  .search-wrap {
+    flex: 1;
+    position: relative;
+  }
+  .search-icon {
+    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: var(--text-faint);
+    pointer-events: none;
+  }
+  .search-wrap input {
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 8px 12px 8px 34px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-wrap input:focus { border-color: var(--border-strong); }
+  .search-wrap input::placeholder { color: var(--text-faint); }
+
+  select.sort-select {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-muted);
+    outline: none;
+    cursor: pointer;
+    min-width: 130px;
+  }
+
+  /* ── JOB TABLE ───────────────────────────────── */
+  .jobs-surface {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  thead {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  thead th {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-faint);
+    padding: 10px 16px;
+    text-align: left;
+  }
+  thead th:first-child { width: 28%; }
+  thead th:nth-child(2) { width: 20%; }
+  thead th:nth-child(3) { width: 14%; }
+  thead th:nth-child(4) { width: 15%; }
+  thead th:nth-child(5) { width: 15%; }
+  thead th:last-child  { width: 8%; text-align: right; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+
+  td {
+    padding: 13px 16px;
+    font-size: 14px;
+    vertical-align: middle;
+  }
+
+  .company-cell { display: flex; align-items: center; gap: 10px; }
+  .company-avatar {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .company-name { font-weight: 500; color: var(--text); }
+  .role-name    { font-size: 12.5px; color: var(--text-muted); margin-top: 1px; }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .status-APPLIED   { background: var(--status-applied-bg);   color: var(--status-applied-text); }
+  .status-INTERVIEW { background: var(--status-interview-bg); color: var(--status-interview-text); }
+  .status-OFFER     { background: var(--status-offer-bg);     color: var(--status-offer-text); }
+  .status-REJECTED  { background: var(--status-rejected-bg);  color: var(--status-rejected-text); }
+  .status-WISHLIST  { background: var(--status-wishlist-bg);  color: var(--status-wishlist-text); }
+
+  .date-cell { color: var(--text-muted); font-size: 13.5px; }
+  .source-cell { font-size: 13px; color: var(--text-muted); }
+
+  .actions { display: flex; gap: 4px; justify-content: flex-end; }
+  .btn-icon {
+    width: 28px; height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-faint);
+    transition: background 0.12s, color 0.12s;
+  }
+  .btn-icon:hover { background: var(--surface2); color: var(--text-muted); }
+  .btn-icon.del:hover { background: var(--status-rejected-bg); color: var(--status-rejected-text); }
+  .btn-icon svg { width: 14px; height: 14px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+  }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 1rem; }
+  .empty-state h3 { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+  .empty-state p { font-size: 14px; }
+
+  /* ── MODAL ───────────────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.32);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 500px;
+    margin: 1rem;
+    overflow: hidden;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(16px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .modal-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .btn-close {
+    width: 30px; height: 30px;
+    border: none; background: var(--surface2);
+    border-radius: 7px;
+    cursor: pointer;
+    color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: background 0.12s;
+  }
+  .btn-close:hover { background: var(--border); }
+
+  .modal-body { padding: 1.25rem 1.5rem; display: grid; gap: 16px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .field input, .field select, .field textarea {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--accent);
+  }
+  .field textarea { resize: vertical; min-height: 72px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .btn-ghost {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 7px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: background 0.12s;
+  }
+  .btn-ghost:hover { background: var(--surface2); }
+
+  /* ── API STATUS ──────────────────────────────── */
+  .api-notice {
+    font-size: 12px;
+    color: var(--text-faint);
+    text-align: center;
+    padding-bottom: 1.5rem;
+  }
+  .api-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--status-rejected-text);
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+  .api-dot.live { background: var(--accent); }
+
+  @media (max-width: 800px) {
+    .stats-bar { grid-template-columns: repeat(3, 1fr); }
+    thead th:nth-child(4), td:nth-child(4),
+    thead th:nth-child(5), td:nth-child(5) { display: none; }
+    .container { padding: 0 1rem; }
+    .header { padding: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 16 16"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v2H2V3zm0 3h12v7a1 1 0 01-1 1H3a1 1 0 01-1-1V6zm4 2a.5.5 0 000 1h4a.5.5 0 000-1H6zm0 2a.5.5 0 000 1h2a.5.5 0 000-1H6z"/></svg>
+    </div>
+    Job Tracker
+  </div>
+  <button class="btn-primary" onclick="openModal()">
+    <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M8 2a.75.75 0 01.75.75v4.5h4.5a.75.75 0 010 1.5h-4.5v4.5a.75.75 0 01-1.5 0v-4.5h-4.5a.75.75 0 010-1.5h4.5v-4.5A.75.75 0 018 2z"/></svg>
+    Add Application
+  </button>
+</header>
+
+<!-- MAIN -->
+<main class="container">
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-card active" data-filter="ALL" onclick="filterBy('ALL', this)">
+      <div class="stat-label">Total</div>
+      <div class="stat-value" id="cnt-all">0</div>
+    </div>
+    <div class="stat-card" data-filter="APPLIED" onclick="filterBy('APPLIED', this)">
+      <div class="stat-label">Applied</div>
+      <div class="stat-value" id="cnt-applied">0</div>
+    </div>
+    <div class="stat-card" data-filter="INTERVIEW" onclick="filterBy('INTERVIEW', this)">
+      <div class="stat-label">Interview</div>
+      <div class="stat-value" id="cnt-interview">0</div>
+    </div>
+    <div class="stat-card" data-filter="OFFER" onclick="filterBy('OFFER', this)">
+      <div class="stat-label">Offer</div>
+      <div class="stat-value" id="cnt-offer">0</div>
+    </div>
+    <div class="stat-card" data-filter="REJECTED" onclick="filterBy('REJECTED', this)">
+      <div class="stat-label">Rejected</div>
+      <div class="stat-value" id="cnt-rejected">0</div>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+        <path d="M10.5 6.5a4 4 0 11-8 0 4 4 0 018 0zm-.82 4.74a5.5 5.5 0 111.06-1.06l3.04 3.04a.75.75 0 11-1.06 1.06l-3.04-3.04z"/>
+      </svg>
+      <input type="text" id="search-input" placeholder="Search company or role…" oninput="renderTable()">
+    </div>
+    <select class="sort-select" id="sort-select" onchange="renderTable()">
+      <option value="date-desc">Newest first</option>
+      <option value="date-asc">Oldest first</option>
+      <option value="company">Company A–Z</option>
+      <option value="status">By status</option>
+    </select>
+  </div>
+
+  <!-- TABLE -->
+  <div class="jobs-surface">
+    <table>
+      <thead>
+        <tr>
+          <th>Company</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Applied</th>
+          <th>Source</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="jobs-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="api-notice">
+    <span class="api-dot" id="api-dot"></span>
+    <span id="api-status">Connecting to API at <code>localhost:8080/api/jobs</code>…</span>
+  </div>
+</main>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Add Application</div>
+      <button class="btn-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="field-row">
+        <div class="field">
+          <label>Company *</label>
+          <input type="text" id="f-company" placeholder="e.g. Google">
+        </div>
+        <div class="field">
+          <label>Role *</label>
+          <input type="text" id="f-role" placeholder="e.g. Backend Engineer">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Status</label>
+          <select id="f-status">
+            <option value="APPLIED">Applied</option>
+            <option value="INTERVIEW">Interview</option>
+            <option value="OFFER">Offer</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="WISHLIST">Wishlist</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Date Applied</label>
+          <input type="date" id="f-date">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Source</label>
+          <input type="text" id="f-source" placeholder="LinkedIn, Naukri…">
+        </div>
+        <div class="field">
+          <label>Job URL</label>
+          <input type="url" id="f-url" placeholder="https://…">
+        </div>
+      </div>
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="f-notes" placeholder="Salary range, recruiter name, next steps…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveJob()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─── CONFIG ──────────────────────────────────── */
+const API = 'http://localhost:8080/api/jobs';
+let jobs = [], currentFilter = 'ALL', apiLive = false;
+
+/* ─── SEED DATA (shown while API is offline) ──── */
+const seed = [
+  { id: 1, company:'Google',    role:'Software Engineer III',    status:'INTERVIEW', appliedDate:'2025-04-10', source:'LinkedIn',  notes:'Onsite scheduled May 5', jobUrl:'' },
+  { id: 2, company:'Flipkart',  role:'Backend Developer',        status:'APPLIED',   appliedDate:'2025-04-15', source:'Naukri',    notes:'',                       jobUrl:'' },
+  { id: 3, company:'Razorpay',  role:'Java Developer',           status:'APPLIED',   appliedDate:'2025-04-18', source:'Referral',  notes:'Via Priya',              jobUrl:'' },
+  { id: 4, company:'Zepto',     role:'Senior Backend Engineer',  status:'OFFER',     appliedDate:'2025-04-02', source:'LinkedIn',  notes:'Package: 38 LPA',        jobUrl:'' },
+  { id: 5, company:'Swiggy',    role:'SDE-2',                    status:'REJECTED',  appliedDate:'2025-03-28', source:'Direct',    notes:'Low band mismatch',      jobUrl:'' },
+  { id: 6, company:'Groww',     role:'Full Stack Engineer',      status:'APPLIED',   appliedDate:'2025-04-20', source:'AngelList', notes:'',                       jobUrl:'' },
+  { id: 7, company:'Atlassian', role:'Software Engineer',        status:'INTERVIEW', appliedDate:'2025-04-08', source:'LinkedIn',  notes:'Phone screen done',      jobUrl:'' },
+];
+
+/* ─── API HELPERS ─────────────────────────────── */
+async function fetchJobs() {
+  try {
+    const r = await fetch(API, { signal: AbortSignal.timeout(3000) });
+    if (!r.ok) throw new Error();
+    jobs = await r.json();
+    apiLive = true;
+    document.getElementById('api-dot').classList.add('live');
+    document.getElementById('api-status').textContent = 'Connected to Spring Boot API';
+  } catch {
+    jobs = JSON.parse(JSON.stringify(seed));
+    apiLive = false;
+    document.getElementById('api-dot').classList.remove('live');
+    document.getElementById('api-status').textContent = 'API offline — showing demo data (localhost:8080/api/jobs)';
+  }
+  renderAll();
+}
+
+async function apiSave(job) {
+  if (!apiLive) return null;
+  const method = job.id ? 'PUT' : 'POST';
+  const url    = job.id ? `${API}/${job.id}` : API;
+  const r = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(job)
+  });
+  return r.json();
+}
+
+async function apiDelete(id) {
+  if (!apiLive) return;
+  await fetch(`${API}/${id}`, { method: 'DELETE' });
+}
+
+/* ─── STATE ───────────────────────────────────── */
+function getFiltered() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  let list = currentFilter === 'ALL' ? jobs : jobs.filter(j => j.status === currentFilter);
+  if (q) list = list.filter(j =>
+    j.company.toLowerCase().includes(q) || j.role.toLowerCase().includes(q)
+  );
+  const sort = document.getElementById('sort-select').value;
+  list = [...list].sort((a, b) => {
+    if (sort === 'date-desc') return new Date(b.appliedDate) - new Date(a.appliedDate);
+    if (sort === 'date-asc')  return new Date(a.appliedDate) - new Date(b.appliedDate);
+    if (sort === 'company')   return a.company.localeCompare(b.company);
+    if (sort === 'status')    return a.status.localeCompare(b.status);
+    return 0;
+  });
+  return list;
+}
+
+function filterBy(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+/* ─── RENDER ──────────────────────────────────── */
+function renderAll() {
+  updateCounts();
+  renderTable();
+}
+
+function updateCounts() {
+  document.getElementById('cnt-all').textContent      = jobs.length;
+  document.getElementById('cnt-applied').textContent  = jobs.filter(j => j.status === 'APPLIED').length;
+  document.getElementById('cnt-interview').textContent= jobs.filter(j => j.status === 'INTERVIEW').length;
+  document.getElementById('cnt-offer').textContent    = jobs.filter(j => j.status === 'OFFER').length;
+  document.getElementById('cnt-rejected').textContent = jobs.filter(j => j.status === 'REJECTED').length;
+}
+
+function renderTable() {
+  const list = getFiltered();
+  const tbody = document.getElementById('jobs-tbody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="6">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3>No applications yet</h3>
+        <p>Click "Add Application" to track your first job.</p>
+      </div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(j => {
+    const initials = j.company.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+    const date = j.appliedDate ? new Date(j.appliedDate).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'2-digit' }) : '—';
+    const statusLabel = { APPLIED:'Applied', INTERVIEW:'Interview', OFFER:'Offer', REJECTED:'Rejected', WISHLIST:'Wishlist' }[j.status] || j.status;
+    return `<tr>
+      <td>
+        <div class="company-cell">
+          <div class="company-avatar">${initials}</div>
+          <div>
+            <div class="company-name">${esc(j.company)}</div>
+          </div>
+        </div>
+      </td>
+      <td><div class="role-name" style="color:var(--text);font-size:14px;">${esc(j.role)}</div></td>
+      <td><span class="status-badge status-${j.status}">${statusLabel}</span></td>
+      <td class="date-cell">${date}</td>
+      <td class="source-cell">${esc(j.source || '—')}</td>
+      <td>
+        <div class="actions">
+          <button class="btn-icon" title="Edit" onclick="editJob(${j.id})">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M11.013 2.513a1.75 1.75 0 012.475 2.474L5.07 13.405l-3.32.482.483-3.32 8.78-8.054zM10.53 3.5L12.5 5.47 13.5 4.47l-2-2-1 1.03z"/></svg>
+          </button>
+          <button class="btn-icon del" title="Delete" onclick="deleteJob(${j.id})">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 1.75a.25.25 0 01.25-.25h2.5a.25.25 0 01.25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 010 1.5H2.75a.75.75 0 010-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.675l.66 6.6a.25.25 0 00.249.225h5.19a.25.25 0 00.249-.225l.66-6.6a.75.75 0 011.492.149l-.66 6.6A1.748 1.748 0 0110.595 15H5.405a1.748 1.748 0 01-1.741-1.576l-.66-6.6a.75.75 0 011.492-.149z"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─── MODAL ───────────────────────────────────── */
+function openModal(job) {
+  document.getElementById('modal-title').textContent = job ? 'Edit Application' : 'Add Application';
+  document.getElementById('edit-id').value    = job ? job.id : '';
+  document.getElementById('f-company').value  = job ? job.company : '';
+  document.getElementById('f-role').value     = job ? job.role : '';
+  document.getElementById('f-status').value   = job ? job.status : 'APPLIED';
+  document.getElementById('f-date').value     = job ? (job.appliedDate || '') : new Date().toISOString().split('T')[0];
+  document.getElementById('f-source').value   = job ? (job.source || '') : '';
+  document.getElementById('f-url').value      = job ? (job.jobUrl || '') : '';
+  document.getElementById('f-notes').value    = job ? (job.notes || '') : '';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function overlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function editJob(id) {
+  const job = jobs.find(j => j.id === id);
+  if (job) openModal(job);
+}
+
+async function saveJob() {
+  const company = document.getElementById('f-company').value.trim();
+  const role    = document.getElementById('f-role').value.trim();
+  if (!company || !role) { alert('Company and role are required.'); return; }
+
+  const id = document.getElementById('edit-id').value;
+  const job = {
+    id: id ? parseInt(id) : null,
+    company,
+    role,
+    status:      document.getElementById('f-status').value,
+    appliedDate: document.getElementById('f-date').value,
+    source:      document.getElementById('f-source').value.trim(),
+    jobUrl:      document.getElementById('f-url').value.trim(),
+    notes:       document.getElementById('f-notes').value.trim(),
+  };
+
+  if (apiLive) {
+    const saved = await apiSave(job);
+    if (id) {
+      const idx = jobs.findIndex(j => j.id === parseInt(id));
+      if (idx > -1) jobs[idx] = saved || job;
+    } else {
+      jobs.unshift(saved || { ...job, id: Date.now() });
+    }
+  } else {
+    if (id) {
+      const idx = jobs.findIndex(j => j.id === parseInt(id));
+      if (idx > -1) jobs[idx] = { ...job, id: parseInt(id) };
+    } else {
+      jobs.unshift({ ...job, id: Date.now() });
+    }
+  }
+
+  closeModal();
+  renderAll();
+}
+
+async function deleteJob(id) {
+  if (!confirm('Remove this application?')) return;
+  await apiDelete(id);
+  jobs = jobs.filter(j => j.id !== id);
+  renderAll();
+}
+
+/* ─── INIT ────────────────────────────────────── */
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+fetchJobs();
+</script>
+</body>
+</html>
